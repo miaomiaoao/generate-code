@@ -1,11 +1,18 @@
 #!/usr/bin/env node
 const program = require('commander')
 const fs = require('fs');
+const path = require('path')
 const axios = require('axios')
 const generate = require('./generate')
-const { transFirstCharToUpper } = require('./utils')
+const { transFirstCharToUpper, createDir, deleteDir } = require('./utils')
 
-let swaggerDocUrl = 'http://192.168.3.173:19009/mvc/v2/api-docs'
+let swaggerDocUrl = ''
+let baseDir = process.cwd()
+
+console.log(process.cwd()) // 返回node进程的当前工作目录
+console.log(path.resolve(process.cwd(), 'api'))
+console.log('api文件是否已经存在: ' + fs.existsSync(path.resolve(process.cwd(), 'api')))
+fs.mkdirSync(path.resolve(process.cwd(), 'api1'))
 
 program
   .version('1.0.0', '-v --version')
@@ -15,7 +22,7 @@ program
 
 console.log('swagger脚本正在执行')
 
-process.on('exit', code => {
+process.on('exit', () => {
   console.log('swagger脚本执行结束')
 })
 
@@ -28,11 +35,7 @@ if(opts.swaggerDocUrl) {
   process.exit()
 }
 
-run()
-
-function run() {
-  getData(swaggerDocUrl)
-}
+getData(swaggerDocUrl)
 
 /**
  * @description 请求swagger doc 文件
@@ -43,9 +46,10 @@ function getData(url) {
     methods: 'get',
     url
   }).then(res => {
+    const targetDir = path.resolve(baseDir, 'api')
     if (res.data) { // 拿到res.data后再删除api下面的文件夹
-      createDir()
-      deleteDir('api')
+      createDir(targetDir)
+      deleteDir(targetDir)
     }
     const paths = res.data.paths
     let arr = []
@@ -68,7 +72,6 @@ function getData(url) {
         }
       })
     })
-    arr = arr.slice(6, 20)
     let moduleMap = {}
     for(let module of arr) {
       if (moduleMap[module.moduleName]) {
@@ -87,38 +90,6 @@ function getData(url) {
     if (err.response) {
       console.log(err.response.data)
     }
+    process.exit()
   })
 }
-
-/**
- * @description 创建文件夹,先判断api文件夹是否存在,不存在则创建文件夹
- */
-function createDir() {
-  if(fs.existsSync('api')) {
-    console.log('api文件夹已存在,不创建api文件夹')
-    return false
-  } 
-  fs.mkdir('api', { recursive: true }, err => {
-    if (err) throw err;
-    console.log('创建api文件夹成功')
-  })
-}
-
-
-/**
- * @description 删除文件,先判断文件是否存在,如果存在再删除文件
- */
-function deleteDir(filePath) {
-  if (!fs.existsSync(filePath)) {
-    console.log(`${filePath}目录不存在,请检查后再调用删除方法!`)
-    return false
-  }
-  const files = fs.readdirSync(filePath)
-  files.forEach(file => {
-    if (fs.statSync(`${filePath}/${file}`).isDirectory()) {
-      deleteDir(`${filePath}/${file}`)
-    } else {
-      fs.unlinkSync(`${filePath}/${file}`)
-    }
-  })
-} 
