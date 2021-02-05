@@ -12,11 +12,14 @@ function createDir(dir) {
   if(fs.existsSync(dir)) {
     console.log('api文件夹已存在,不创建api文件夹')
     return false
-  } 
-  fs.mkdir(dir, { recursive: true }, err => {
-    if (err) throw err;
+  }
+  try {
+    fs.mkdirSync(dir, { recursive: true } )
     console.log('创建api文件夹成功')
-  })
+  } catch(e) {
+    console.log(e)
+    process.exit()
+  }
 }
 
 
